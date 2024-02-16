@@ -10,3 +10,4 @@ TODO:
 - add rate limiting
 - add auth
 - add deployable features (?)
+- experiment with protobuf instead of json
