@@ -1,12 +1,16 @@
-from flask import jsonify, Response
+import json
+
+from flask import Response
 from flask_openapi3 import Info, OpenAPI, Tag
+from google.protobuf import json_format
+from google.protobuf.message import Message
 
 from src.model.schemas import GetMultipleResponseSchema, GetParameterSchema, GetResponseSchema, \
     PostBodySchema
-from src.model.stock import Stock
-from src.model.stock_symbols_enum import StockSymbolsEnum
+from src.protobuffs import transactions_pb2
+from src.utils import utils
 
-transactions: list[Stock] = [Stock(symbol=z) for z in StockSymbolsEnum]
+transactions: Message = transactions_pb2.Transactions()
 
 info = Info(title="Stocks Viewer API", version="1.0.0")
 app = OpenAPI(__name__, info=info)
@@ -16,47 +20,79 @@ post_stocks = Tag(name="Post Methods", description="Post Specific Stocks")
 
 
 @app.get("/stocks/all",
-         summary="Get stocks",
+         summary="Get all stocks",
          description="Get stats for all stocks",
          responses={200: GetMultipleResponseSchema},
          tags=[get_stocks])
 def get_all():
-    return [x.to_json() for x in transactions if x.qty != 0]
+    all_stocks = json_format.MessageToDict(transactions)
+    try:
+        return json.dumps(all_stocks['stock'])
+    except KeyError:
+        return json.dumps(all_stocks)
+    except Exception as e:
+        with open("logs.txt", "a", encoding="utf-8") as infile:
+            infile.write(e)
 
 
 @app.get('/stock/<symbol>',
          summary="Get stock",
          description="Get stats for a specific stock",
-         responses={200: GetResponseSchema},
+         responses={200: GetResponseSchema, 404: {}},
          tags=[get_stocks])
 def get_specific_stock(path: GetParameterSchema):
-    try:
-        stock_name = StockSymbolsEnum(path.symbol.split(".")[0])
-        return [x.to_json() for x in transactions if x.qty != 0 and x.symbol == stock_name][0]
-    except:
-        return jsonify({})
+    stock_of_interest = utils.get_stock_of_interest_from_message(parent=transactions,
+                                                                 use_integers_for_enums=True,
+                                                                 search_key=path.symbol)
+    if stock_of_interest is None:
+        return Response("Status Code 404: Symbol not in portfolio\n", status=404)
+    else:
+        stock_of_interest['symbol'] = path.symbol
+        return json.dumps(stock_of_interest)
 
 
-@app.post('/purchase',
+@app.post('/buy',
           summary="Purchase stock",
           description="Post the details of stock to buy",
           responses={
-              404: {},
-              200: {},
-              500: {}
+              404: {"msg": "Requested Resource was Not Found\n"},
+              200: {"msg": "ok\n"},
+              500: {"msg": "Unexpected error while processing the buy request\n"}
           },
           tags=[post_stocks])
 def add_purchase(body: PostBodySchema):
     try:
-        try:
-            stock_symbol = StockSymbolsEnum(body.stock_symbol.split(".")[0])
-        except ValueError:
-            return Response(response="Requested Resource was Not Found\n", status=404)
-        stock = [x for x in transactions if x.symbol == stock_symbol][0]
-        stock.buy_units(units=body.units, price=body.price_per_unit)
-        return Response("ok\n", status=200)
-    except Exception:
-        return Response("Unexpected error while processing the purchase request\n", status=500)
+        existing_stock = utils.get_stock_of_interest_from_message(parent=transactions,
+                                                                  use_integers_for_enums=True,
+                                                                  search_key=body.stock_symbol)
+        new_stock = transactions_pb2.Stock()
+        symbol = utils.get_enum_value_from_name(body.stock_symbol.split(".")[0].upper())
+        new_stock.symbol = symbol
+        
+        if existing_stock is None and symbol != -1:
+            new_stock.price = body.price_per_unit
+            new_stock.qty = body.units
+        elif existing_stock is None and symbol == -1:
+            return Response("Status Code 404: Symbol not in portfolio\n", status=404)
+        else:
+            price = existing_stock['price']
+            qty = existing_stock['qty']
+            
+            stock_to_remove = transactions_pb2.Stock()
+            stock_to_remove.symbol = symbol
+            stock_to_remove.price = price
+            stock_to_remove.qty = qty
+            transactions.stock.remove(stock_to_remove)
+            
+            new_stock.qty = qty + body.units
+            new_stock.price = ((price * qty) + (body.price_per_unit * body.units)) / new_stock.qty
+        
+        transactions.stock.extend([new_stock])
+        return Response("Status Code 200: ok\n", status=200)
+    except Exception as e:
+        with open("logs.txt", "a", encoding="utf-8") as infile:
+            infile.write(e)
+        return Response("Status Code 500: Unexpected error while processing the purchase request\n", status=500)
 
 
 @app.post('/sell',
@@ -70,19 +106,35 @@ def add_purchase(body: PostBodySchema):
           tags=[post_stocks])
 def add_sale(body: PostBodySchema):
     try:
-        try:
-            stock_symbol = StockSymbolsEnum(body.stock_symbol.split(".")[0])
-        except ValueError:
-            return Response(response="Requested Resource was Not Found\n", status=404)
-        already_included_stock = [x for x in transactions if x.symbol == stock_symbol and x.qty != 0]
-        if already_included_stock:
-            stock = already_included_stock[0]
-            stock.sell_units(units=body.units, price=body.price_per_unit)
-            return Response("ok\n", status=200)
+        existing_stock = utils.get_stock_of_interest_from_message(parent=transactions,
+                                                                  use_integers_for_enums=True,
+                                                                  search_key=body.stock_symbol)
+        if existing_stock is None:
+            return Response("Status Code 404: Symbol not in portfolio\n", status=404)
         else:
-            return Response(response="Requested Resource was Not Found\n", status=404)
-    except Exception:
-        return Response("Unexpected error while processing the sale request\n", status=500)
+            qty = existing_stock['qty']
+            if qty < body.units:
+                return Response("Status Code 500: Cannot sell more than held units\n", status=404)
+            symbol = existing_stock['symbol']
+            price = existing_stock['price']
+            
+            stock_to_remove = transactions_pb2.Stock()
+            stock_to_remove.symbol = symbol
+            stock_to_remove.price = price
+            stock_to_remove.qty = qty
+            transactions.stock.remove(stock_to_remove)
+            
+            if qty - body.units > 0:
+                new_stock = transactions_pb2.Stock()
+                new_stock.symbol = symbol
+                new_stock.qty = qty - body.units
+                new_stock.price = ((price * qty) - (body.price_per_unit * body.units)) / new_stock.qty
+                transactions.stock.extend([new_stock])
+            return Response("Status Code 200: ok\n", status=200)
+    except Exception as e:
+        with open("logs.txt", "a", encoding="utf-8") as infile:
+            infile.write(e)
+        return Response("Status Code 500: Unexpected error while processing the purchase request\n", status=500)
 
 
 if __name__ == "__main__":

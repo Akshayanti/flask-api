@@ -1,0 +1,54 @@
+syntax = "proto3";
+
+package proto;
+
+
+message Stock {
+  enum Symbol {
+    TWILIO = 0;
+    APPLE = 1;
+    AMAZON = 2;
+    GOOGLE = 3;
+    MICROSOFT = 4;
+    BARCLAYS = 5;
+    IBM = 6;
+    METLIFE = 7;
+    PHILIPS = 8;
+    PHILIP_MORRIS = 9;
+    UPS = 10;
+    AMD = 11;
+    HONEYWELL = 12;
+    MASTERCARD = 13;
+    MSI = 14;
+    NVIDIA = 15;
+    PURE_STORAGE = 16;
+    SENTINEL_ONE = 17;
+    SPLUNK = 18;
+    VISA = 19;
+    CATERPILLAR = 20;
+    COLGATE = 21;
+    FEDEX = 22;
+    GENERAL_ELECTRIC = 23;
+    JOHNSON = 24;
+    MERK = 25;
+    PEPSI = 26;
+    PROCTOR_AND_GAMBLE = 27;
+    STARBUCKS = 28;
+    SCHWAB = 29;
+    SHELL = 30;
+    BP = 31;
+    PETROLEO_BRASILEIRO = 32;
+    VOLKSWAGEN = 33;
+    CISCO = 34;
+    ASTRA_SPACE = 35;
+    VIRGIN_GALACTIC_SPACE = 36;
+    UNKNOWN = -1;
+  }
+  Symbol symbol = 1;
+  float price = 2;
+  float qty = 3;
+}
+
+message Transactions {
+  repeated Stock stock = 1;
+}

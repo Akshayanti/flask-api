@@ -172,10 +172,10 @@
   },
   "openapi": "3.1.0",
   "paths": {
-    "/purchase": {
+    "/buy": {
       "post": {
         "description": "Post the details of stock to buy",
-        "operationId": "add_purchase_purchase_post",
+        "operationId": "add_purchase_buy_post",
         "requestBody": {
           "content": {
             "application/json": {
@@ -188,10 +188,12 @@
         },
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK",
+            "msg": "ok\n"
           },
           "404": {
-            "description": "Not Found"
+            "description": "Not Found",
+            "msg": "Requested Resource was Not Found\n"
           },
           "422": {
             "content": {
@@ -207,7 +209,8 @@
             "description": "Unprocessable Entity"
           },
           "500": {
-            "description": "Internal Server Error"
+            "description": "Internal Server Error",
+            "msg": "Unexpected error while processing the buy request\n"
           }
         },
         "summary": "Purchase stock",
@@ -291,6 +294,9 @@
             },
             "description": "OK"
           },
+          "404": {
+            "description": "Not Found"
+          },
           "422": {
             "content": {
               "application/json": {
@@ -327,7 +333,7 @@
             "description": "OK"
           }
         },
-        "summary": "Get stocks",
+        "summary": "Get all stocks",
         "tags": [
           "Get Methods"
         ]

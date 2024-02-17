@@ -1,16 +1,19 @@
+curl http://localhost:5000/openapi/openapi.json > openapi.json
+
+
 curl -X POST -H "Content-Type: application/json" -d '{
-	"stock_symbol": "BARC",
+	"stock_symbol": "NVDA",
 	"price_per_unit": 1000.0,
 	"units": 10
-}' http://localhost:5000/purchase
+}' http://localhost:5000/buy
 
 sleep 1
 
 curl -X POST -H "Content-Type: application/json" -d '{
-	"stock_symbol": "BARC.L",
+	"stock_symbol": "NDA",
 	"price_per_unit": 2000.0,
 	"units": 10
-}' http://localhost:5000/purchase
+}' http://localhost:5000/buy
 
 sleep 1
 
@@ -19,9 +22,9 @@ curl http://localhost:5000/stocks/all
 sleep 1
 
 curl -X POST -H "Content-Type: application/json" -d '{
-	"stock_symbol": "BARC",
+	"stock_symbol": "NVDA",
 	"price_per_unit": 1000.0,
-	"units": 10
+	"units": 15
 }' http://localhost:5000/sell
 
 sleep 1
@@ -31,9 +34,9 @@ curl http://localhost:5000/stocks/all
 sleep 1
 
 curl -X POST -H "Content-Type: application/json" -d '{
-	"stock_symbol": "BARC.L",
+	"stock_symbol": "NDA",
 	"price_per_unit": 15000.0,
-	"units": 5
+	"units": 15
 }' http://localhost:5000/sell
 
 sleep 1
