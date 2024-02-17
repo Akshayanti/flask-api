@@ -5,7 +5,7 @@ package proto;
 
 message Stock {
   enum Symbol {
-    TWILIO = 0;
+    UNKNOWN = 0;
     APPLE = 1;
     AMAZON = 2;
     GOOGLE = 3;
@@ -42,7 +42,7 @@ message Stock {
     CISCO = 34;
     ASTRA_SPACE = 35;
     VIRGIN_GALACTIC_SPACE = 36;
-    UNKNOWN = -1;
+    TWILIO = 37;
   }
   Symbol symbol = 1;
   float price = 2;

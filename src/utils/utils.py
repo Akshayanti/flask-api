@@ -52,9 +52,11 @@ def get_enum_value_from_name(input_symbol):
 def get_stock_of_interest_from_message(parent, use_integers_for_enums, search_key):
     stock_name = search_key.split(".")[0].upper()
     stock_enum = get_enum_value_from_name(stock_name)
-    if stock_enum != -1:
-        for x in json_format.MessageToDict(message=parent,
-                                           use_integers_for_enums=use_integers_for_enums)['stock']:
-            if x['symbol'] == stock_enum:
-                return x
+    if stock_enum != 0:
+        generated_dict = json_format.MessageToDict(message=parent,
+                                           use_integers_for_enums=use_integers_for_enums)
+        if generated_dict != {}:
+            for x in generated_dict['stock']:
+                if x['symbol'] == stock_enum:
+                    return x
     return None
