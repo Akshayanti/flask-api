@@ -2,3 +2,4 @@ Flask~=3.0.1
 Marshmallow~=3.20.2
 flask_openapi3
 protobuf
+pytest>=7.4.4
