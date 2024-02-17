@@ -25,8 +25,14 @@ post_stocks = Tag(name="Post Methods", description="Post Specific Stocks")
          responses={200: GetMultipleResponseSchema},
          tags=[get_stocks])
 def get_all():
-    all_stocks = json_format.MessageToDict(transactions)['stock']
-    return json.dumps(all_stocks)
+    all_stocks = json_format.MessageToDict(transactions)
+    try:
+        return json.dumps(all_stocks['stock'])
+    except KeyError:
+        return json.dumps(all_stocks)
+    except Exception as e:
+        with open("logs.txt", "a", encoding="utf-8") as infile:
+            infile.write(e)
 
 
 @app.get('/stock/<symbol>',
@@ -49,9 +55,9 @@ def get_specific_stock(path: GetParameterSchema):
           summary="Purchase stock",
           description="Post the details of stock to buy",
           responses={
-              404: {},
-              200: {},
-              500: {}
+              404: {"msg": "Requested Resource was Not Found\n"},
+              200: {"msg": "ok\n"},
+              500: {"msg": "Unexpected error while processing the buy request\n"}
           },
           tags=[post_stocks])
 def add_purchase(body: PostBodySchema):
@@ -61,14 +67,17 @@ def add_purchase(body: PostBodySchema):
                                                                   search_key=body.stock_symbol)
         new_stock = transactions_pb2.Stock()
         symbol = utils.get_enum_value_from_name(body.stock_symbol.split(".")[0].upper())
-        price = existing_stock['price']
-        qty = existing_stock['qty']
         new_stock.symbol = symbol
         
-        if existing_stock is None:
+        if existing_stock is None and symbol != -1:
             new_stock.price = body.price_per_unit
             new_stock.qty = body.units
+        elif existing_stock is None and symbol == -1:
+            return Response("Status Code 404: Symbol not in portfolio\n", status=404)
         else:
+            price = existing_stock['price']
+            qty = existing_stock['qty']
+            
             stock_to_remove = transactions_pb2.Stock()
             stock_to_remove.symbol = symbol
             stock_to_remove.price = price
@@ -77,50 +86,56 @@ def add_purchase(body: PostBodySchema):
             
             new_stock.qty = qty + body.units
             new_stock.price = ((price * qty) + (body.price_per_unit * body.units)) / new_stock.qty
-            
+        
         transactions.stock.extend([new_stock])
-        return Response("ok\n", status=200)
-    except Exception:
-        return Response("Unexpected error while processing the purchase request\n", status=500)
+        return Response("Status Code 200: ok\n", status=200)
+    except Exception as e:
+        with open("logs.txt", "a", encoding="utf-8") as infile:
+            infile.write(e)
+        return Response("Status Code 500: Unexpected error while processing the purchase request\n", status=500)
 
 
-# @app.post('/sell',
-#           summary="Sell stock",
-#           description="Post the details of stock to sell",
-#           responses={
-#               404: {"msg": "Requested Resource was Not Found\n"},
-#               200: {"msg": "ok\n"},
-#               500: {"msg": "Unexpected error while processing the sale request\n"}
-#           },
-#           tags=[post_stocks])
-# def add_sale(body: PostBodySchema):
-#     try:
-#         try:
-#             stock_symbol = StockSymbolsEnum(body.stock_symbol.split(".")[0])
-#         except ValueError:
-#             return Response(response="Requested Resource was Not Found\n", status=404)
-#         already_included_stock = [x for x in transactions if x.symbol == stock_symbol and x.qty != 0]
-#         if already_included_stock:
-#             stock = already_included_stock[0]
-#             stock.sell_units(units=body.units, price=body.price_per_unit)
-#             return Response("ok\n", status=200)
-#         else:
-#             return Response(response="Requested Resource was Not Found\n", status=404)
-#     except Exception:
-#         return Response("Unexpected error while processing the sale request\n", status=500)
+@app.post('/sell',
+          summary="Sell stock",
+          description="Post the details of stock to sell",
+          responses={
+              404: {"msg": "Requested Resource was Not Found\n"},
+              200: {"msg": "ok\n"},
+              500: {"msg": "Unexpected error while processing the sale request\n"}
+          },
+          tags=[post_stocks])
+def add_sale(body: PostBodySchema):
+    try:
+        existing_stock = utils.get_stock_of_interest_from_message(parent=transactions,
+                                                                  use_integers_for_enums=True,
+                                                                  search_key=body.stock_symbol)
+        if existing_stock is None:
+            return Response("Status Code 404: Symbol not in portfolio\n", status=404)
+        else:
+            qty = existing_stock['qty']
+            if qty < body.units:
+                return Response("Status Code 500: Cannot sell more than held units\n", status=404)
+            symbol = existing_stock['symbol']
+            price = existing_stock['price']
+            
+            stock_to_remove = transactions_pb2.Stock()
+            stock_to_remove.symbol = symbol
+            stock_to_remove.price = price
+            stock_to_remove.qty = qty
+            transactions.stock.remove(stock_to_remove)
+            
+            if qty - body.units > 0:
+                new_stock = transactions_pb2.Stock()
+                new_stock.symbol = symbol
+                new_stock.qty = qty - body.units
+                new_stock.price = ((price * qty) - (body.price_per_unit * body.units)) / new_stock.qty
+                transactions.stock.extend([new_stock])
+            return Response("Status Code 200: ok\n", status=200)
+    except Exception as e:
+        with open("logs.txt", "a", encoding="utf-8") as infile:
+            infile.write(e)
+        return Response("Status Code 500: Unexpected error while processing the purchase request\n", status=500)
 
 
-# if __name__ == "__main__":
-
-# Dummy data
-stock1 = transactions_pb2.Stock()
-stock1.price = 12
-stock1.symbol = 15
-stock1.qty = 15
-stock2 = transactions_pb2.Stock()
-stock2.price = 12
-stock2.symbol = 18
-stock2.qty = 15
-transactions.stock.extend([stock1, stock2])
-# End Dummy data
-app.run(debug=True)
+if __name__ == "__main__":
+    app.run(debug=True)

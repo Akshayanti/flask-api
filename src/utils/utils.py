@@ -1,5 +1,6 @@
-from protobuffs import transactions_pb2
 from google.protobuf import json_format
+
+from protobuffs import transactions_pb2
 
 
 def get_enum_value_from_name(input_symbol):
