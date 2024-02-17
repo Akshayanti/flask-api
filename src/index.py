@@ -57,22 +57,31 @@ def get_specific_stock(path: GetParameterSchema):
 def add_purchase(body: PostBodySchema):
     try:
         existing_stock = utils.get_stock_of_interest_from_message(parent=transactions,
-                                                                  use_integers_for_enums=False,
+                                                                  use_integers_for_enums=True,
                                                                   search_key=body.stock_symbol)
+        new_stock = transactions_pb2.Stock()
+        symbol = utils.get_enum_value_from_name(body.stock_symbol.split(".")[0].upper())
+        price = existing_stock['price']
+        qty = existing_stock['qty']
+        new_stock.symbol = symbol
+        
         if existing_stock is None:
-            new_stock = transactions_pb2.Stock()
-            stock1.price = 12
-            stock1.symbol = 15
-            stock1.qty = 15
-            # add stock for the thingy and add it to transactions
-            pass
+            new_stock.price = body.price_per_unit
+            new_stock.qty = body.units
         else:
-            # do some calculations here
-            pass
+            stock_to_remove = transactions_pb2.Stock()
+            stock_to_remove.symbol = symbol
+            stock_to_remove.price = price
+            stock_to_remove.qty = qty
+            transactions.stock.remove(stock_to_remove)
+            
+            new_stock.qty = qty + body.units
+            new_stock.price = ((price * qty) + (body.price_per_unit * body.units)) / new_stock.qty
+            
+        transactions.stock.extend([new_stock])
         return Response("ok\n", status=200)
     except Exception:
         return Response("Unexpected error while processing the purchase request\n", status=500)
-        # stock.buy_units(units=body.units, price=body.price_per_unit)
 
 
 # @app.post('/sell',

@@ -2,7 +2,7 @@ from protobuffs import transactions_pb2
 from google.protobuf import json_format
 
 
-def get_symbol_enum_from_name(input_symbol):
+def get_enum_value_from_name(input_symbol):
     new_dict = {
         "TWLO":  transactions_pb2.Stock.Symbol.TWILIO,
         "AAPL":  transactions_pb2.Stock.Symbol.APPLE,
@@ -50,7 +50,7 @@ def get_symbol_enum_from_name(input_symbol):
 
 def get_stock_of_interest_from_message(parent, use_integers_for_enums, search_key):
     stock_name = search_key.split(".")[0].upper()
-    stock_enum = get_symbol_enum_from_name(stock_name)
+    stock_enum = get_enum_value_from_name(stock_name)
     if stock_enum != -1:
         for x in json_format.MessageToDict(message=parent,
                                            use_integers_for_enums=use_integers_for_enums)['stock']:

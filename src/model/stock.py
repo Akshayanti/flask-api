@@ -8,12 +8,6 @@ class Stock(object):
         self.avg_price: float = 0
         self.qty: float = 0
     
-    def buy_units(self,
-                  units: float,
-                  price: float):
-        self.avg_price = ((self.qty * self.avg_price) + (units * price)) / (self.qty + units)
-        self.qty += units
-    
     def sell_units(self,
                    units: float,
                    price: float):

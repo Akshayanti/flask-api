@@ -1,5 +1,5 @@
 curl -X POST -H "Content-Type: application/json" -d '{
-	"stock_symbol": "BARC",
+	"stock_symbol": "NVDA",
 	"price_per_unit": 1000.0,
 	"units": 10
 }' http://localhost:5000/buy
@@ -7,7 +7,7 @@ curl -X POST -H "Content-Type: application/json" -d '{
 sleep 1
 
 curl -X POST -H "Content-Type: application/json" -d '{
-	"stock_symbol": "BARC.L",
+	"stock_symbol": "NVDA",
 	"price_per_unit": 2000.0,
 	"units": 10
 }' http://localhost:5000/buy
