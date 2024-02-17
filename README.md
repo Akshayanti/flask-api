@@ -5,6 +5,7 @@ Links
 
 - https://auth0.com/docs/quickstart/backend/python
 - https://auth0.com/blog/developing-restful-apis-with-python-and-flask/
+- https://cloud.google.com/run/docs/quickstarts/build-and-deploy/deploy-python-service
 
 TODO:
 - [] add flask test
