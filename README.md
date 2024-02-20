@@ -8,8 +8,8 @@ Links
 - https://cloud.google.com/run/docs/quickstarts/build-and-deploy/deploy-python-service
 
 TODO:
-- [] add flask test
 - [] add rate limiting
 - [] add auth
-- [] add deployable features (?)
+- [] add deployable features [?]
 - [x] experiment with protobuf instead of json
+- [x] add flask test
